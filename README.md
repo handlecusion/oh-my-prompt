@@ -85,6 +85,8 @@ That single tabbed page gives you Stats, Patterns, Efficiency, and your Suggest 
   <img src="./docs/screenshots/suggest-archive.png" alt="Suggest archive viewer with date list on the left and rendered markdown on the right" width="100%">
 </p>
 
+> Screenshots above are generated from `scripts/build_mock_db.py --locale en` — fully synthetic data so no real user prompt is exposed. The dashboard chrome is also swapped to English via `scripts/localize_html.py` before capture (the runtime UI is Korean).
+
 ---
 
 ## Install (option 2: clone manually)

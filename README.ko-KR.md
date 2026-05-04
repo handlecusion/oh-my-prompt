@@ -64,26 +64,28 @@
 `/omp:dashboard` — 네 패널을 한 페이지의 탭으로 통합:
 
 <p align="center">
-  <img src="./docs/screenshots/dashboard.png" alt="통합 대시보드: 사이드바에 Stats / Patterns / Efficiency / Suggest Archive 탭" width="100%">
+  <img src="./docs/screenshots/ko/dashboard.png" alt="통합 대시보드: 사이드바에 Stats / Patterns / Efficiency / Suggest Archive 탭" width="100%">
 </p>
 
 `/omp:patterns` — 반복 지시·의도 분포·첫 4단어 패턴·자동 제안:
 
 <p align="center">
-  <img src="./docs/screenshots/patterns.png" alt="패턴 대시보드: 의도별 분포 차트, 반복 프롬프트 테이블, 첫 4단어 막대 차트" width="100%">
+  <img src="./docs/screenshots/ko/patterns.png" alt="패턴 대시보드: 의도별 분포 차트, 반복 프롬프트 테이블, 첫 4단어 막대 차트" width="100%">
 </p>
 
 `/omp:efficiency` — 세션별 지렛대/자율도, 상하위 20% 비교, 첫 프롬프트 카드 좌우 배치, 도구 사용 격차:
 
 <p align="center">
-  <img src="./docs/screenshots/efficiency.png" alt="효율 대시보드: 상위 vs 하위 지렛대 세션 비교" width="100%">
+  <img src="./docs/screenshots/ko/efficiency.png" alt="효율 대시보드: 상위 vs 하위 지렛대 세션 비교" width="100%">
 </p>
 
 `/omp:suggest-archive` — `/omp:suggest`로 누적된 분석 본문을 사이드바 목록 + DOMPurify 마크다운 렌더링:
 
 <p align="center">
-  <img src="./docs/screenshots/suggest-archive.png" alt="Suggest 보관함 뷰어: 좌측 날짜 목록, 우측 마크다운 본문" width="100%">
+  <img src="./docs/screenshots/ko/suggest-archive.png" alt="Suggest 보관함 뷰어: 좌측 날짜 목록, 우측 마크다운 본문" width="100%">
 </p>
+
+> 위 스크린샷은 `scripts/build_mock_db.py --locale ko`가 생성한 한국어 mock 데이터 기반 — 실제 사용자 프롬프트가 노출되지 않도록 익명 데이터로 생성.
 
 ---
 
