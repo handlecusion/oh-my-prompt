@@ -1,50 +1,54 @@
+[한국어](./README.ko.md)
+
 # oh-my-prompt
 
-> Claude Code 사용 패턴을 분석해 **더 적은 프롬프트로 더 많은 결과**를 끌어내기 위한 플러그인
+> A Claude Code plugin that analyzes your usage so you can get **more output from fewer prompts**.
 
-내가 쓴 프롬프트, 토큰, 도구 호출, 세션 정보를 로컬 SQLite에 쌓아두고:
+It quietly logs your prompts, tokens, tool calls, and session metadata into a local SQLite database, then helps you turn that data into actionable improvements:
 
-- 자주 반복되는 짧은 지시 → `CLAUDE.md` / 메모리 / 슬래시 커맨드 후보로 자동 제안
-- 효율 높은 세션과 낮은 세션을 비교해 "어떤 식으로 시작했을 때 잘 됐는지" 찾기
-- 분석 결과를 `claude -p` 한 번 호출로 패치 초안까지 자동 생성
+- Surface short prompts you keep retyping → candidates for `CLAUDE.md` rules, memory entries, or new slash commands
+- Compare your high-leverage sessions against your low-leverage ones to learn what kind of opening prompt actually works for you
+- Hand the raw analysis to a sub-agent and let it draft the patches
 
-100% 로컬에서 동작. 외부 전송 없음. API 키 불필요 (`claude` CLI 인증 그대로 사용).
+100% local. No outbound calls. No API key required (uses your existing `claude` CLI auth).
 
 ---
 
-## 슬래시 커맨드
+## Slash commands
 
-| 커맨드 | 인자 | 설명 |
+| Command | Args | What it does |
 |---|---|---|
-| `/omp:stats [days]` | 일수 (기본 7) | 일별 토큰, 모델별 사용량, 세션 통계, 프로젝트별 분포 |
-| `/omp:patterns [days] [min]` | 30, 3 | 반복 지시·의도 분포·CLAUDE.md 후보 |
-| `/omp:efficiency [days] [min]` | 30, 3 | 세션별 효율 메트릭, 상/하위 비교, 첫 프롬프트 분석 |
-| `/omp:suggest [days] [min]` | 30, 3 | 위 두 분석을 `claude -p`로 보내 패치 초안 생성 |
+| `/omp:stats [days]` | days (default 7) | Daily token usage, per-model breakdown, per-project distribution, session stats — rendered as a web dashboard |
+| `/omp:patterns [days] [min]` | 30, 3 | Repeated prompts, intent distribution, first-4-words patterns, `CLAUDE.md` candidates — web dashboard |
+| `/omp:efficiency [days] [min]` | 30, 3 | Per-session leverage / autonomy / tool metrics, top vs bottom 20% comparison, first-prompt analysis — web dashboard |
+| `/omp:suggest [days] [min]` | 30, 3 | Runs both analyses, hands the raw output to an Opus sub-agent, and writes a structured proposal (rules, memory, slash candidates) to `~/.claude/omp_suggestions/<timestamp>.md` |
+| `/omp:suggest-archive` | — | Browse the cumulative `~/.claude/omp_suggestions/` archive in a sidebar viewer |
+| `/omp:dashboard [stats_days] [days] [min]` | 7, 30, 3 | All four panels above in a single tabbed page (`1`-`4` / `j`/`k` / arrows to switch) |
 
 ---
 
-## 설치
+## Install
 
-### 옵션 1: 플러그인 마켓플레이스 (권장)
+### Option 1: Plugin marketplace (recommended)
 
 ```
 /plugin marketplace add github.com/handlecusion/oh-my-prompt
 /plugin install omp@oh-my-prompt
 ```
 
-설치하면 `UserPromptSubmit` / `Stop` 훅이 자동으로 등록되고, `~/.claude/omp.db`에 데이터가 쌓이기 시작함. 첫 실행 후:
+The `UserPromptSubmit` and `Stop` hooks register themselves automatically and start writing to `~/.claude/omp.db`. After your first session:
 
 ```
 /omp:stats
 ```
 
-### 옵션 2: 직접 클론 후 settings.json 수동 등록
+### Option 2: Clone and wire up `settings.json` manually
 
 ```bash
 git clone https://github.com/handlecusion/oh-my-prompt ~/Code/oh-my-prompt
 ```
 
-`~/.claude/settings.json` 의 `hooks` 에 추가:
+Add to the `hooks` block of `~/.claude/settings.json`:
 
 ```json
 {
@@ -61,27 +65,27 @@ git clone https://github.com/handlecusion/oh-my-prompt ~/Code/oh-my-prompt
 }
 ```
 
-### 백필 (과거 트랜스크립트 import)
+### Backfill (import past transcripts)
 
-`~/.claude/projects/**/*.jsonl` 의 모든 과거 세션을 한 번에 인제스트:
+Walks every `~/.claude/projects/**/*.jsonl` and ingests it in one shot:
 
 ```bash
 python3 ~/Code/oh-my-prompt/hooks/backfill.py
 ```
 
-UPSERT 기반이라 여러 번 돌려도 안전 (새 세션만 추가됨).
+UPSERT-based, so you can rerun safely (only new sessions are added).
 
 ---
 
-## 데이터
+## Data
 
-- **위치**: `~/.claude/omp.db` (SQLite)
-- **테이블 2개**:
+- **Location**: `~/.claude/omp.db` (SQLite)
+- **Two tables**:
   - `prompts(prompt_id UNIQUE, session_id, cwd, prompt, char_count, word_count, is_sidechain, ts)`
   - `token_usage(msg_id UNIQUE, session_id, cwd, model, input/output/cache_*_tokens, text_chars, tool_use_count, tool_names, is_sidechain, ts)`
-- **dedup 키**: 트랜스크립트의 `promptId` / 메시지 `id`. 라이브 훅과 백필이 충돌 없이 같은 데이터를 공유함.
+- **Dedup keys**: the transcript's `promptId` / message `id`. The live hook and the backfill safely share the same rows.
 
-raw SQL이 편하면:
+If you prefer raw SQL:
 
 ```bash
 sqlite3 ~/.claude/omp.db "SELECT cwd, COUNT(*), SUM(total_tokens) FROM token_usage GROUP BY cwd ORDER BY 3 DESC LIMIT 10;"
@@ -89,16 +93,16 @@ sqlite3 ~/.claude/omp.db "SELECT cwd, COUNT(*), SUM(total_tokens) FROM token_usa
 
 ---
 
-## 분석 메트릭 의미
+## Metric definitions
 
-- **leverage** = `output_tokens / user_prompts` — 한 프롬프트당 얼마나 길게 답했는가
-- **autonomy** = `assistant_turns / user_prompts` — 사용자 끼어들기 사이 평균 턴 수 (높을수록 한 번 시켜놓고 길게 자율 진행)
-- **tools_per_prompt** — 한 프롬프트 후 도구를 몇 번 호출했는가
+- **leverage** = `output_tokens / user_prompts` — how much output you got per prompt
+- **autonomy** = `assistant_turns / user_prompts` — average turns between user interruptions (higher = you set it up once and it runs longer)
+- **tools_per_prompt** — how many tool calls were issued per prompt
 
-상위 leverage 세션의 첫 프롬프트가 길고 컨텍스트가 명확하면 → "긴 첫 프롬프트가 효과적"이라는 시그널.
+If your top-leverage sessions consistently start with a long, context-rich first prompt, that's a strong signal that "front-load the context" works for you.
 
 ---
 
-## 라이선스
+## License
 
 MIT
