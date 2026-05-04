@@ -45,6 +45,12 @@ def open_db():
         DB_PATH.chmod(0o600)
     except OSError:
         pass
+    # WAL allows concurrent reads while a writer holds the lock — important because
+    # both UserPromptSubmit and Stop hooks may write to the same DB simultaneously
+    # under parallel sessions. busy_timeout retries on transient locks.
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA busy_timeout=3000")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS prompts (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
