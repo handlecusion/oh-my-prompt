@@ -2,28 +2,15 @@
 """omp 통계 대시보드 - HTML 생성 후 브라우저로 오픈"""
 
 import json
-import os
 import sqlite3
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _tmp import omp_tmpdir
+
 DB_PATH = Path.home() / ".claude" / "omp.db"
-
-
-def omp_tmpdir() -> Path:
-    """Per-user tempdir under $TMPDIR. Avoids predictable-name symlink races on
-    multi-user Linux /tmp."""
-    base = Path(tempfile.gettempdir())
-    uid = getattr(os, "getuid", lambda: 0)()
-    d = base / f"omp-{uid}"
-    d.mkdir(mode=0o700, exist_ok=True)
-    try:
-        d.chmod(0o700)
-    except OSError:
-        pass
-    return d
 
 
 def collect(days: int):

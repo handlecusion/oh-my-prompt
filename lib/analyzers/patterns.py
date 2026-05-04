@@ -8,30 +8,19 @@
 """
 
 import json
-import os
 import re
 import sqlite3
 import subprocess
 import sys
-import tempfile
 from collections import Counter
 from io import StringIO
 from pathlib import Path
 
+# add `lib/` to sys.path so we can import the shared _tmp helper
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from _tmp import omp_tmpdir
+
 DB_PATH = Path.home() / ".claude" / "omp.db"
-
-
-def omp_tmpdir() -> Path:
-    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
-    base = Path(tempfile.gettempdir())
-    uid = getattr(os, "getuid", lambda: 0)()
-    d = base / f"omp-{uid}"
-    d.mkdir(mode=0o700, exist_ok=True)
-    try:
-        d.chmod(0o700)
-    except OSError:
-        pass
-    return d
 
 SYSTEM_PREFIXES = (
     "<local-command-",

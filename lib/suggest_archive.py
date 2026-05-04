@@ -6,26 +6,14 @@
 """
 
 import json
-import os
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _tmp import omp_tmpdir
+
 ARCHIVE = Path.home() / ".claude" / "omp_suggestions"
-
-
-def omp_tmpdir() -> Path:
-    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
-    base = Path(tempfile.gettempdir())
-    uid = getattr(os, "getuid", lambda: 0)()
-    d = base / f"omp-{uid}"
-    d.mkdir(mode=0o700, exist_ok=True)
-    try:
-        d.chmod(0o700)
-    except OSError:
-        pass
-    return d
 
 
 HTML = """<!doctype html>
