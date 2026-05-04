@@ -22,7 +22,7 @@ def _load(name: str, path: Path):
     return mod
 
 
-dashboard = _load("omp_dashboard", ROOT / "hooks" / "dashboard.py")
+dashboard = _load("omp_dashboard", ROOT / "lib" / "dashboard.py")
 patterns = _load("omp_patterns", ROOT / "lib" / "analyzers" / "patterns.py")
 efficiency = _load("omp_efficiency", ROOT / "lib" / "analyzers" / "efficiency.py")
 suggest_archive = _load("omp_suggest_archive", ROOT / "lib" / "suggest_archive.py")

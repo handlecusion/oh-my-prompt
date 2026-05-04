@@ -7,6 +7,7 @@ DB_PATH = Path.home() / ".claude" / "omp.db"
 
 
 def _add_col(conn, table, col_def):
+    # `table`/`col_def` are always module-internal literals; never accept user input here.
     col_name = col_def.split()[0]
     cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
     if col_name not in cols:
