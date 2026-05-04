@@ -10,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/handlecusion/oh-my-prompt/actions/workflows/ci.yml"><img src="https://github.com/handlecusion/oh-my-prompt/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://github.com/handlecusion/oh-my-prompt/stargazers"><img src="https://img.shields.io/github/stars/handlecusion/oh-my-prompt?style=flat-square" alt="Stars"></a>
   <a href="https://github.com/handlecusion/oh-my-prompt/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square" alt="MIT Licence"></a>
   <a href="https://www.python.org/"><img src="https://img.shields.io/badge/python-3.10%2B-blue.svg?style=flat-square" alt="Python 3.10+"></a>
