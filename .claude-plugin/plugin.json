@@ -1,0 +1,18 @@
+{
+  "name": "omp",
+  "version": "0.1.0",
+  "description": "oh-my-prompt: Claude Code 사용 패턴을 분석해 더 적은 프롬프트로 더 많이 끌어내기 위한 플러그인",
+  "author": {
+    "name": "handlecusion"
+  },
+  "homepage": "https://github.com/handlecusion/oh-my-prompt",
+  "repository": "https://github.com/handlecusion/oh-my-prompt",
+  "license": "MIT",
+  "keywords": [
+    "analytics",
+    "prompt-engineering",
+    "productivity",
+    "telemetry",
+    "self-improvement"
+  ]
+}

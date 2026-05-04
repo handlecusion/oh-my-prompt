@@ -1,0 +1,22 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "oh-my-prompt",
+  "description": "Claude Code 사용 분석 플러그인 — 반복 지시 발견, 효율 점수, 자동 개선 제안",
+  "owner": {
+    "name": "handlecusion"
+  },
+  "plugins": [
+    {
+      "name": "omp",
+      "description": "내 Claude Code 사용 패턴을 분석해 더 적은 프롬프트로 더 많이 끌어내게 해주는 플러그인",
+      "version": "0.1.0",
+      "author": {
+        "name": "handlecusion"
+      },
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/handlecusion/oh-my-prompt",
+      "tags": ["analytics", "prompt-engineering", "productivity", "self-improvement"]
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "description": "oh-my-prompt 사용 데이터 수집 훅",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/prompt_logger.py\"",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/token_logger.py\"",
+            "async": true,
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
