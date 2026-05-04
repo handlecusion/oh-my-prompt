@@ -8,6 +8,7 @@
 """
 
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -18,6 +19,19 @@ from io import StringIO
 from pathlib import Path
 
 DB_PATH = Path.home() / ".claude" / "omp.db"
+
+
+def omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 SYSTEM_PREFIXES = (
     "<local-command-",
@@ -450,7 +464,7 @@ def main():
         return
 
     html = render_html(data)
-    out = Path(tempfile.gettempdir()) / "omp_patterns.html"
+    out = omp_tmpdir() / "omp_patterns.html"
     out.write_text(html, encoding="utf-8")
 
     try:

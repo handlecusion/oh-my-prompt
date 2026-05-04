@@ -6,12 +6,26 @@
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ARCHIVE = Path.home() / ".claude" / "omp_suggestions"
+
+
+def omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 
 HTML = """<!doctype html>
@@ -153,13 +167,24 @@ document.addEventListener("keydown", (ev) => {
 
 def collect_entries():
     ARCHIVE.mkdir(parents=True, exist_ok=True)
+    try:
+        ARCHIVE.chmod(0o700)
+    except OSError:
+        pass
     files = sorted(ARCHIVE.glob("*.md"), reverse=True)
-    return [{
-        "stem": f.stem,
-        "name": f.name,
-        "size": f.stat().st_size,
-        "content": f.read_text(encoding="utf-8"),
-    } for f in files]
+    entries = []
+    for f in files:
+        try:
+            f.chmod(0o600)  # archived analyses can quote raw prompts; keep them owner-only.
+        except OSError:
+            pass
+        entries.append({
+            "stem": f.stem,
+            "name": f.name,
+            "size": f.stat().st_size,
+            "content": f.read_text(encoding="utf-8"),
+        })
+    return entries
 
 
 def _safe_json(d) -> str:
@@ -175,7 +200,7 @@ def render_html(entries) -> str:
 def main():
     entries = collect_entries()
     html = render_html(entries)
-    out = Path(tempfile.gettempdir()) / "omp_suggest_archive.html"
+    out = omp_tmpdir() / "omp_suggest_archive.html"
     out.write_text(html, encoding="utf-8")
 
     try:

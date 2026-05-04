@@ -8,6 +8,7 @@
 """
 
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -17,6 +18,19 @@ from pathlib import Path
 from statistics import mean, median
 
 DB_PATH = Path.home() / ".claude" / "omp.db"
+
+
+def omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 
 def fmt(n):
@@ -517,7 +531,7 @@ def main():
         return
 
     html = render_html(data)
-    out = Path(tempfile.gettempdir()) / "omp_efficiency.html"
+    out = omp_tmpdir() / "omp_efficiency.html"
     out.write_text(html, encoding="utf-8")
 
     try:
