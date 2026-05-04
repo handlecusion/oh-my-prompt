@@ -60,7 +60,29 @@ That single tabbed page gives you Stats, Patterns, Efficiency, and your Suggest 
 
 ## Screenshots
 
-> Screenshots are added in a follow-up commit (Day 2 of the README polish plan).
+`/omp:dashboard` — one tabbed page that wraps the four panels below:
+
+<p align="center">
+  <img src="./docs/screenshots/dashboard.png" alt="Unified dashboard: sidebar with Stats / Patterns / Efficiency / Suggest Archive tabs" width="100%">
+</p>
+
+`/omp:patterns` — repeated prompts, intent distribution, first-4-words patterns, auto suggestions:
+
+<p align="center">
+  <img src="./docs/screenshots/patterns.png" alt="Patterns dashboard with intent distribution chart, repeated-prompt table, and first-4-words bar chart" width="100%">
+</p>
+
+`/omp:efficiency` — per-session leverage / autonomy, top-vs-bottom 20% comparison, side-by-side first-prompt cards, tool usage delta:
+
+<p align="center">
+  <img src="./docs/screenshots/efficiency.png" alt="Efficiency dashboard comparing top-leverage vs bottom-leverage sessions" width="100%">
+</p>
+
+`/omp:suggest-archive` — sidebar list + DOMPurify-rendered markdown of every cumulative `/omp:suggest` analysis:
+
+<p align="center">
+  <img src="./docs/screenshots/suggest-archive.png" alt="Suggest archive viewer with date list on the left and rendered markdown on the right" width="100%">
+</p>
 
 ---
 
