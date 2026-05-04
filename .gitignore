@@ -7,3 +7,4 @@ __pycache__/
 *.db-journal
 *.db-wal
 *.db-shm
+.playwright-mcp/
