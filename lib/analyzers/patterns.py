@@ -242,7 +242,9 @@ HTML = """<!doctype html>
 <head>
 <meta charset="utf-8" />
 <title>omp 패턴 — 최근 __DAYS__일</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
 <style>
   :root { --bg:#0b0d10; --panel:#14181d; --border:#232830; --text:#e6e9ee;
           --muted:#8a93a0; --accent:#6ea8ff; --accent2:#5ad9b1; --warn:#ffb86b; }
@@ -417,11 +419,16 @@ function escapeHtml(s) {
 """
 
 
+def _safe_json(d) -> str:
+    # Prevent `</script>` in stored prompts from breaking out of the inline data block.
+    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render_html(d: dict) -> str:
     return (HTML
             .replace("__DAYS__", str(d["days"]))
             .replace("__DBPATH__", d["db_path"])
-            .replace("__DATA__", json.dumps(d, ensure_ascii=False)))
+            .replace("__DATA__", _safe_json(d)))
 
 
 def main():

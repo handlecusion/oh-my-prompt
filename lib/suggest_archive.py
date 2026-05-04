@@ -19,7 +19,12 @@ HTML = """<!doctype html>
 <head>
 <meta charset="utf-8" />
 <title>omp suggest archive (__COUNT__건)</title>
-<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
+        integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"
+        integrity="sha384-Ic7KEGROu37YaruU6NyiYeib7UhjFyDZQ5fzBAji965L75T/4LGk5nzwMEjNGexs"
+        crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0b0d10;
@@ -110,7 +115,10 @@ function render(idx) {
     return;
   }
   document.getElementById("meta").textContent = `${e.stem}   ·   ${(e.size/1024).toFixed(1)} KB`;
-  document.getElementById("content").innerHTML = marked.parse(e.content);
+  // marked v12 does not sanitize; route through DOMPurify so a poisoned
+  // suggestion file (e.g., one quoting a malicious user prompt) cannot
+  // execute scripts when rendered.
+  document.getElementById("content").innerHTML = DOMPurify.sanitize(marked.parse(e.content));
   window.scrollTo(0, 0);
   document.querySelector("main").scrollTo(0, 0);
 }
@@ -154,10 +162,14 @@ def collect_entries():
     } for f in files]
 
 
+def _safe_json(d) -> str:
+    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render_html(entries) -> str:
     return (HTML
             .replace("__COUNT__", str(len(entries)))
-            .replace("__DATA__", json.dumps(entries, ensure_ascii=False)))
+            .replace("__DATA__", _safe_json(entries)))
 
 
 def main():
