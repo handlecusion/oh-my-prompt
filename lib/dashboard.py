@@ -2,6 +2,7 @@
 """omp 통계 대시보드 - HTML 생성 후 브라우저로 오픈"""
 
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -9,6 +10,20 @@ import tempfile
 from pathlib import Path
 
 DB_PATH = Path.home() / ".claude" / "omp.db"
+
+
+def omp_tmpdir() -> Path:
+    """Per-user tempdir under $TMPDIR. Avoids predictable-name symlink races on
+    multi-user Linux /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 
 def collect(days: int):
@@ -105,7 +120,9 @@ HTML = """<!doctype html>
 <head>
 <meta charset="utf-8" />
 <title>omp 통계 — 최근 __DAYS__일</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0b0d10;
@@ -256,11 +273,17 @@ new Chart(document.getElementById("modelChart"), {
   },
 });
 
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
 // project table
 const proj = DATA.projects;
 document.querySelector("#projTable tbody").innerHTML = proj.map(p => {
   const path = p.cwd && p.cwd.length > 50 ? "..." + p.cwd.slice(-47) : (p.cwd || "");
-  return `<tr><td class="proj">${path}</td><td class="num">${fmt(p.total)}</td><td class="num">${p.turns}</td><td class="num">${p.sessions}</td></tr>`;
+  return `<tr><td class="proj">${escapeHtml(path)}</td><td class="num">${fmt(p.total)}</td><td class="num">${p.turns}</td><td class="num">${p.sessions}</td></tr>`;
 }).join("");
 
 // bucket chart
@@ -303,11 +326,17 @@ document.getElementById("sessionCards").innerHTML = sessCards.map(c =>
 """
 
 
+def _safe_json(d) -> str:
+    # `</` would close the surrounding inline <script> tag and let attacker-controlled
+    # content (e.g., a stored prompt with `</script><img onerror=...>`) execute.
+    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render(data: dict) -> str:
     return (HTML
             .replace("__DAYS__", str(data["days"]))
             .replace("__DBPATH__", str(DB_PATH))
-            .replace("__DATA__", json.dumps(data, ensure_ascii=False)))
+            .replace("__DATA__", _safe_json(data)))
 
 
 def main():
@@ -319,7 +348,7 @@ def main():
     data = collect(days)
     html = render(data)
 
-    out = Path(tempfile.gettempdir()) / "omp_dashboard.html"
+    out = omp_tmpdir() / "omp_dashboard.html"
     out.write_text(html, encoding="utf-8")
 
     try:

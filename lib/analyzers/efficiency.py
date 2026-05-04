@@ -8,6 +8,7 @@
 """
 
 import json
+import os
 import sqlite3
 import subprocess
 import sys
@@ -17,6 +18,19 @@ from pathlib import Path
 from statistics import mean, median
 
 DB_PATH = Path.home() / ".claude" / "omp.db"
+
+
+def omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 
 def fmt(n):
@@ -304,7 +318,9 @@ HTML = """<!doctype html>
 <head>
 <meta charset="utf-8" />
 <title>omp 효율 — 최근 __DAYS__일</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"
+        integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4"
+        crossorigin="anonymous"></script>
 <style>
   :root { --bg:#0b0d10; --panel:#14181d; --border:#232830; --text:#e6e9ee;
           --muted:#8a93a0; --accent:#6ea8ff; --accent2:#5ad9b1; --warn:#ffb86b; --bad:#ff7b9c; }
@@ -484,11 +500,16 @@ if (DATA.session_count === 0) {
 """
 
 
+def _safe_json(d) -> str:
+    # Prevent `</script>` in stored prompts from breaking out of the inline data block.
+    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
+
+
 def render_html(d: dict) -> str:
     return (HTML
             .replace("__DAYS__", str(d["days"]))
             .replace("__DBPATH__", d["db_path"])
-            .replace("__DATA__", json.dumps(d, ensure_ascii=False)))
+            .replace("__DATA__", _safe_json(d)))
 
 
 def main():
@@ -510,7 +531,7 @@ def main():
         return
 
     html = render_html(data)
-    out = Path(tempfile.gettempdir()) / "omp_efficiency.html"
+    out = omp_tmpdir() / "omp_efficiency.html"
     out.write_text(html, encoding="utf-8")
 
     try:

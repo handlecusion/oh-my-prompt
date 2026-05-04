@@ -1,12 +1,36 @@
 """공통 DB 스키마 + 트랜스크립트 파서"""
 import json
+import re
 import sqlite3
 from pathlib import Path
 
 DB_PATH = Path.home() / ".claude" / "omp.db"
 
+# Best-effort secret masking on stored prompt text. Patterns that produce too many
+# false positives (generic long base64) are intentionally excluded.
+_SECRET_PATTERNS = [
+    (re.compile(r"sk-(?:ant-)?[A-Za-z0-9_-]{20,}"),     "[REDACTED:anthropic-or-openai-key]"),
+    (re.compile(r"xox[baprs]-[A-Za-z0-9-]{10,}"),        "[REDACTED:slack-token]"),
+    (re.compile(r"gh[pousr]_[A-Za-z0-9]{30,}"),          "[REDACTED:github-token]"),
+    (re.compile(r"github_pat_[A-Za-z0-9_]{20,}"),        "[REDACTED:github-pat]"),
+    (re.compile(r"AKIA[0-9A-Z]{16}"),                    "[REDACTED:aws-access-key]"),
+    (re.compile(r"AIza[0-9A-Za-z_-]{35}"),               "[REDACTED:google-api-key]"),
+    (re.compile(r"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
+                                                          "[REDACTED:jwt]"),
+]
+
+
+def redact(text: str) -> str:
+    if not text:
+        return text
+    out = text
+    for rx, label in _SECRET_PATTERNS:
+        out = rx.sub(label, out)
+    return out
+
 
 def _add_col(conn, table, col_def):
+    # `table`/`col_def` are always module-internal literals; never accept user input here.
     col_name = col_def.split()[0]
     cols = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
     if col_name not in cols:
@@ -14,7 +38,19 @@ def _add_col(conn, table, col_def):
 
 
 def open_db():
-    conn = sqlite3.connect(DB_PATH)
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(DB_PATH, timeout=3.0)
+    # Tighten file perms — DB stores raw user prompts (potentially secrets).
+    try:
+        DB_PATH.chmod(0o600)
+    except OSError:
+        pass
+    # WAL allows concurrent reads while a writer holds the lock — important because
+    # both UserPromptSubmit and Stop hooks may write to the same DB simultaneously
+    # under parallel sessions. busy_timeout retries on transient locks.
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA busy_timeout=3000")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS prompts (
             id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,6 +176,7 @@ def ingest_transcript(conn, path: Path):
                     continue
                 if text.startswith("<command-") or text.startswith("Caveat:"):
                     continue
+                text = redact(text)
                 pid = d.get("promptId") or f"{sid}:{ts}"
                 cur = conn.execute(
                     """INSERT INTO prompts

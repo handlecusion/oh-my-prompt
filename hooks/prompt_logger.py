@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from _db import open_db
+from _db import open_db, redact
 
 
 def main():
@@ -16,7 +16,7 @@ def main():
     except Exception:
         sys.exit(0)
 
-    prompt = data.get("prompt", "")
+    prompt = redact(data.get("prompt", ""))
     session_id = data.get("session_id", "")
     cwd = data.get("cwd", "")
     ts = datetime.now().isoformat()

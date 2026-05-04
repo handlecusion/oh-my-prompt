@@ -5,13 +5,27 @@ stdout으로 JSON 한 줄만 출력한다 (input_path, output_path, days, min_co
 """
 
 import json
+import os
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ARCHIVE = Path.home() / ".claude" / "omp_suggestions"
+
+
+def _omp_tmpdir() -> Path:
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
 
 
 def capture(cmd):
@@ -27,12 +41,16 @@ def main():
     min_count = sys.argv[2] if len(sys.argv) > 2 else "3"
 
     ARCHIVE.mkdir(parents=True, exist_ok=True)
+    try:
+        ARCHIVE.chmod(0o700)
+    except OSError:
+        pass
 
     patterns = capture(["python3", str(ROOT / "lib/analyzers/patterns.py"), days, min_count, "--text"])
     efficiency = capture(["python3", str(ROOT / "lib/analyzers/efficiency.py"), days, min_count, "--text"])
 
     ts = time.strftime("%Y-%m-%d_%H%M%S")
-    input_path = Path("/tmp") / f"omp_suggest_input_{ts}.md"
+    input_path = _omp_tmpdir() / f"omp_suggest_input_{ts}.md"
     output_path = ARCHIVE / f"{ts}.md"
 
     input_path.write_text(
@@ -46,6 +64,10 @@ def main():
 """,
         encoding="utf-8",
     )
+    try:
+        input_path.chmod(0o600)  # may quote raw user prompts (with secrets if redact missed any).
+    except OSError:
+        pass
 
     print(json.dumps({
         "days": days,

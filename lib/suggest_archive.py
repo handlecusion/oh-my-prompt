@@ -6,6 +6,7 @@
 """
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -14,12 +15,30 @@ from pathlib import Path
 ARCHIVE = Path.home() / ".claude" / "omp_suggestions"
 
 
+def omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
+
+
 HTML = """<!doctype html>
 <html lang="ko">
 <head>
 <meta charset="utf-8" />
 <title>omp suggest archive (__COUNT__건)</title>
-<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"
+        integrity="sha384-/TQbtLCAerC3jgaim+N78RZSDYV7ryeoBCVqTuzRrFec2akfBkHS7ACQ3PQhvMVi"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.11/dist/purify.min.js"
+        integrity="sha384-Ic7KEGROu37YaruU6NyiYeib7UhjFyDZQ5fzBAji965L75T/4LGk5nzwMEjNGexs"
+        crossorigin="anonymous"></script>
 <style>
   :root {
     --bg: #0b0d10;
@@ -110,7 +129,10 @@ function render(idx) {
     return;
   }
   document.getElementById("meta").textContent = `${e.stem}   ·   ${(e.size/1024).toFixed(1)} KB`;
-  document.getElementById("content").innerHTML = marked.parse(e.content);
+  // marked v12 does not sanitize; route through DOMPurify so a poisoned
+  // suggestion file (e.g., one quoting a malicious user prompt) cannot
+  // execute scripts when rendered.
+  document.getElementById("content").innerHTML = DOMPurify.sanitize(marked.parse(e.content));
   window.scrollTo(0, 0);
   document.querySelector("main").scrollTo(0, 0);
 }
@@ -145,25 +167,40 @@ document.addEventListener("keydown", (ev) => {
 
 def collect_entries():
     ARCHIVE.mkdir(parents=True, exist_ok=True)
+    try:
+        ARCHIVE.chmod(0o700)
+    except OSError:
+        pass
     files = sorted(ARCHIVE.glob("*.md"), reverse=True)
-    return [{
-        "stem": f.stem,
-        "name": f.name,
-        "size": f.stat().st_size,
-        "content": f.read_text(encoding="utf-8"),
-    } for f in files]
+    entries = []
+    for f in files:
+        try:
+            f.chmod(0o600)  # archived analyses can quote raw prompts; keep them owner-only.
+        except OSError:
+            pass
+        entries.append({
+            "stem": f.stem,
+            "name": f.name,
+            "size": f.stat().st_size,
+            "content": f.read_text(encoding="utf-8"),
+        })
+    return entries
+
+
+def _safe_json(d) -> str:
+    return json.dumps(d, ensure_ascii=False).replace("</", "<\\/")
 
 
 def render_html(entries) -> str:
     return (HTML
             .replace("__COUNT__", str(len(entries)))
-            .replace("__DATA__", json.dumps(entries, ensure_ascii=False)))
+            .replace("__DATA__", _safe_json(entries)))
 
 
 def main():
     entries = collect_entries()
     html = render_html(entries)
-    out = Path(tempfile.gettempdir()) / "omp_suggest_archive.html"
+    out = omp_tmpdir() / "omp_suggest_archive.html"
     out.write_text(html, encoding="utf-8")
 
     try:

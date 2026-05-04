@@ -6,13 +6,29 @@
 """
 
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-TMP = Path(tempfile.gettempdir())
+
+
+def _omp_tmpdir() -> Path:
+    """Per-user tempdir; avoids predictable-name symlink races on shared /tmp."""
+    base = Path(tempfile.gettempdir())
+    uid = getattr(os, "getuid", lambda: 0)()
+    d = base / f"omp-{uid}"
+    d.mkdir(mode=0o700, exist_ok=True)
+    try:
+        d.chmod(0o700)
+    except OSError:
+        pass
+    return d
+
+
+TMP = _omp_tmpdir()
 
 
 def _load(name: str, path: Path):
@@ -22,7 +38,7 @@ def _load(name: str, path: Path):
     return mod
 
 
-dashboard = _load("omp_dashboard", ROOT / "hooks" / "dashboard.py")
+dashboard = _load("omp_dashboard", ROOT / "lib" / "dashboard.py")
 patterns = _load("omp_patterns", ROOT / "lib" / "analyzers" / "patterns.py")
 efficiency = _load("omp_efficiency", ROOT / "lib" / "analyzers" / "efficiency.py")
 suggest_archive = _load("omp_suggest_archive", ROOT / "lib" / "suggest_archive.py")
